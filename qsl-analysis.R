@@ -195,6 +195,7 @@ library(directlabels)
 text_size = 16
 # note that nih_distinct is an object from a 
 # local R package with OSTRC themed colors
+# running the code will result in aesthetically different figures from the article
 # coloring commands are included for transparency
 # the Trebuchet MS font family has to be installed with a font package
 ostrc_theme =  theme(panel.border = element_blank(), 
@@ -208,11 +209,13 @@ ostrc_theme =  theme(panel.border = element_blank(),
                                                  colour="black", 
                                                  face = "bold", hjust = -0.01))
 
+# theme_line is also a local package function
+# with a standard OSTRC theme for line graphs
 plot_interaction_exposed = 
   ggplot(d_preds_interaction_exposed, aes(x = exposure_daily, y = preds, group = labels, color = labels))  + 
   geom_line(size = 0.8) +
   # scale_color_manual(values = nih_distinct[1:4]) +
-  theme_line(text_size) +
+  # theme_line(text_size) +
   ostrc_theme +
   scale_x_continuous(breaks = scales::breaks_width(10, 0)) +
   scale_y_continuous(labels = axis_percent, limits = c(NA, 0.053), breaks = scales::breaks_width(0.01, 0)) +
@@ -231,7 +234,6 @@ dev.off()
 #--------------------------------- Running analysis on all imputed datasets using Ruben's rules
 
 # this is for final model estimates reported in the main table in the paper
-
 l_mids_tbl_qsl = l_mids_qsl %>%  mice::complete("all") %>% 
   map(. %>% as_tibble() %>% mutate(exposure_daily_lag = lag(exposure_daily),
                                    exposure_daily_lag_imputed = ifelse(is.na(exposure_daily_lag), 
@@ -263,7 +265,7 @@ l_fit_interaction = map2(l_daily_exposed,
 d_pooled = summary(l_fit_interaction %>% mice::pool(), conf.int = TRUE, exponentiate = TRUE) %>% as_tibble() %>% mutate_if(is.numeric, ~round(., 3))
 
 # writing model coefficients to server
-#write_excel_csv(d_pooled, "modelcoefs_qsl.csv", delim = ";", na = "")
+write_excel_csv(d_pooled, "modelcoefs_qsl.csv", delim = ";", na = "")
 
 #--------------------------- to report the example profiles used in supplementary table
 
@@ -293,17 +295,14 @@ plot_interaction_exposed_glmm =
   ggplot(d_preds_interaction_exposed_glmm, aes(x = exposure_daily, y = preds, group = labels, color = labels))  + 
   geom_line(size = 0.8) +
   # scale_color_manual(values = nih_distinct[1:4]) +
-  theme_line(text_size) +
+  # theme_line(text_size) +
   ostrc_theme +
   scale_x_continuous(breaks = scales::breaks_width(10, 0)) +
   scale_y_continuous(labels = axis_percent) +
   ylab("Probability of injury") +
   xlab("Minutes in activity")
 
-devEMF::emf("plot_interaction_exposed_glmm.emf", width = 6, height = 6)
-direct.label.ggplot(plot_interaction_exposed_glmm, method = list("top.bumpup", cex = 1.2))
-dev.off()
-
+# to save figure
 setEPS()
 postscript("plot_interaction_exposed_glmm.eps", width = 6, height = 6)
 direct.label.ggplot(plot_interaction_exposed_glmm, method = list("top.bumpup", cex = 1.2))
@@ -364,7 +363,7 @@ parameters::parameters(fit_ewma, ci_method="wald", exponentiate = TRUE)
 
 # EWMA figure has a much easier approach with ggeffects
 library(ggeffects)
-# use quantiles as example levels
+# look at quantiles for example levels
 quantile(d_daily_mods$exposure_daily_ewma, na.rm = TRUE)
 
 d_preds_ewma = ggpredict(fit_ewma, terms = 
@@ -373,7 +372,7 @@ d_preds_ewma = ggpredict(fit_ewma, terms =
 
 preds_interaction_ewma = plot(d_preds_ewma, ci = FALSE) +
   # scale_color_manual(values = nih_distinct[1:4]) +
-  theme_line(text_size) +
+  # theme_line(text_size) +
   ostrc_theme +
   scale_x_continuous(breaks = scales::breaks_width(10, 0))  +
   ylab("Probability of injury") +
@@ -381,32 +380,10 @@ preds_interaction_ewma = plot(d_preds_ewma, ci = FALSE) +
   theme(legend.position = "bottom") +
   ggtitle(NULL)
 
-devEMF::emf("plot_interaction_ewma.emf", width = 6, height = 6)
-preds_interaction_ewma
-dev.off()
-
 setEPS()
 postscript("plot_interaction_ewma_qsl.eps", width = 6, height = 6)
 preds_interaction_ewma
 dev.off()
-
-#----------------------------------Figures
-
-# vector of tl values used in visualizations of predictions
-lag_seq = lag_min:lag_max 
-predvalues = seq(min(d_daily$exposure_daily), max(d_daily$exposure_daily), 10)
-
-# predict hazards 
-cp_preds = crosspred(cb_past_exposure, fit_interaction, at = predvalues, cen = 0, cumul = TRUE)
-
-cumul_freq = ggplot(d_asympt_preds_freq_cumul, aes(x = predvalue, y = coef, group = 1)) +
-  geom_ribbon(aes(min = ci_low, max = ci_high), alpha = 0.3, fill = nih_distinct[1]) +
-  geom_hline(yintercept = 1, alpha = 0.3, size = 1) +
-  geom_line(size = 0.75, color = nih_distinct[4]) +
-  theme_base(text_size) +
-  ostrc_theme +
-  xlab("Daily number of jumps") +
-  ylab("Cumulative HR on Day 0") 
 
 #--------------------------------------Crossproduct predictions of chronic load
 
@@ -427,12 +404,17 @@ lag_example = pred_cb$matRRfit[7,] %>%
          low = pred_cb$matRRlow[7,],
          high = pred_cb$matRRhigh[7,])
 
+# color object initially had OSTRC color
+# we replace it here with black
+# it is used in figures further down as well
+color_object = "black"
+
 alpha_evel = 0.3
 plot_lag = ggplot(lag_example, aes(x = Lag, y = OR, ymin = low, ymax = high)) +
-  geom_hline(yintercept = 1.0, col = nih_distinct[4], alpha = alpha_evel, size = 1) +
-  geom_ribbon(fill = nih_distinct[1], alpha = alpha_evel) + 
-  geom_line(size = 0.8, color = nih_distinct[4]) +
-  theme_line(text_size) +
+  geom_hline(yintercept = 1.0, col = color_object, alpha = alpha_evel, size = 1) +
+  geom_ribbon(fill = color_object, alpha = alpha_evel) + 
+  geom_line(size = 0.8, color = color_object) +
+  # theme_line(text_size) +
   ostrc_theme +
   scale_x_continuous(breaks = scales::breaks_width(5, -1)) +
   ylab("Odds Ratio") +
@@ -490,13 +472,15 @@ level_example3 = pred_cb$matRRfit[,27] %>%
          low = pred_cb$matRRlow[,27],
          high = pred_cb$matRRhigh[,27])
 
+# function for making the same figure,
+# since we are making 3
 plot_dlnm = function(data, day){
   
   ggplot(data, aes(x = Minutes, y = OR, group = 1, ymin = low, ymax = high))  +
-    geom_hline(yintercept = 1.0, col = nih_distinct[4], alpha = alpha_evel, size = 1) +
-    geom_ribbon(fill = nih_distinct[1], alpha = alpha_evel) + 
-    geom_line(size = 0.8, color = nih_distinct[4]) +
-    theme_line(text_size) +
+    geom_hline(yintercept = 1.0, col = color_object, alpha = alpha_evel, size = 1) +
+    geom_ribbon(fill = color_object, alpha = alpha_evel) + 
+    geom_line(size = 0.8, color = color_object) +
+    # theme_line(text_size) +
     ostrc_theme +
     scale_x_continuous(breaks = scales::breaks_width(20, 0)) +
     ylab("Odds Ratio") +
@@ -512,7 +496,7 @@ cairo_pdf("plot_dlnm_qsl.pdf", width = 9, height = 8, fallback_resolution = 600)
 ggpubr::ggarrange(plot_lag, plot_level1, plot_level2, plot_level3)
 dev.off()
 
-#----------------------------------------- Analyzing acute and overload injuries separately
+#----------------------------------------- Analyzing sudden onset and gradual onset injuries separately
 
 # models with interaction (main result)
 fit_interaction_sudden = glm(acute ~ rms::rcs(exposure_daily, c(15, 25, 80)) + 
@@ -538,8 +522,8 @@ d_preds_gradual = pred_interaction(fit_interaction_gradual, d_predvalues_exposed
 plot_sudden = 
   ggplot(d_preds_sudden, aes(x = exposure_daily, y = preds, group = labels, color = labels))  + 
   geom_line(size = 0.8) +
-  scale_color_manual(values = nih_distinct[1:4]) +
-  theme_line(text_size) +
+  # scale_color_manual(values = nih_distinct[1:4]) +
+  # theme_line(text_size) +
   ostrc_theme +
   scale_x_continuous(breaks = scales::breaks_width(20, 0)) +
   scale_y_continuous(labels = axis_percent, limits = c(NA, 0.04), breaks = scales::breaks_width(0.01, 0)) +
@@ -549,8 +533,8 @@ plot_sudden =
 plot_gradual = 
   ggplot(d_preds_gradual, aes(x = exposure_daily, y = preds, group = labels, color = labels))  + 
   geom_line(size = 0.8) +
-  scale_color_manual(values = nih_distinct[1:4]) +
-  theme_line(text_size) +
+  # scale_color_manual(values = nih_distinct[1:4]) +
+  # theme_line(text_size) +
   ostrc_theme +
   scale_x_continuous(breaks = scales::breaks_width(20, 0)) +
   scale_y_continuous(labels = axis_percent, limits = c(NA, 0.04), breaks = scales::breaks_width(0.01, 0)) +
