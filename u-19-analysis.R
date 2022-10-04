@@ -2,10 +2,8 @@ library(tidyverse)
 library(dlnm)
 library(slider) # for EWMA
 
-# read data
-folder_base = paste0("O:\\Prosjekter\\Dalen-Lorentsen - Belastningsstyring - prosjekt 1 - metode\\Data\\")
-folder_nor_soccer = paste0("soccer-norwegian-u19\\") # location of U19 soccer data
-l_u19 = readRDS(paste0(folder_base, folder_nor_soccer,"u19_imputed.RDS"))
+folder_base = "my_file_location//"
+l_u19 = readRDS(paste0(folder_base, "my_imputed_file.rds"))
 
 # define min and max lag for DLNM
 # remember that day 0 (current day) 
