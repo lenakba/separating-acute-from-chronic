@@ -320,7 +320,7 @@ ewma = function(x, n_days){
   TTR::EMA(x, n = n_days, wilder = FALSE)
 }
 
-# function calculates ewma on a sliding window of 21 days
+# function calculates ewma on a sliding window of lag_max +1 days
 slide_ewma = function(x){
   l = slide(x, ~ewma(., lag_max+1), .before = lag_max, step = 1, .complete = TRUE) %>% map(last)
   l = compact(l)
@@ -332,7 +332,7 @@ slide_ewma = function(x){
 # and run a user-specified function on each of their datasets in the list
 function_on_list = function(d, FUN = NULL, day_start){
   nested_list = d %>% group_by(player_id_num) %>% nest()
-  nested_list$data = nested_list$data %>% map(., ~FUN(.$exposure_daily_lag_imputed))
+  nested_list$data = nested_list$data %>% map(., ~FUN(.$exposure_daily_lag_imputed_chronic))
   l_unnest = unnest(nested_list, cols = c(data)) %>% group_by(player_id_num) %>% 
     mutate(day = 1:n()) %>% ungroup()
   l_unnest
@@ -341,7 +341,7 @@ function_on_list = function(d, FUN = NULL, day_start){
 # EWMA can't handle a single missing value, and when we lag the TL observations
 # the first will be missing. We will use mean imputation for these first value so that EWMA may be calculated
 # on the first 28 days of data.
-d_daily_1 = d_daily_1 %>% mutate(exposure_daily_lag_chronic = lag(exposure_daily, 7),
+d_daily_1 = d_daily_1 %>% mutate(exposure_daily_lag_chronic = lag(exposure_daily, 1),
                                  exposure_daily_lag_imputed_chronic = 
                                    ifelse(is.na(exposure_daily_lag_chronic), 
                                           mean(exposure_daily, na.rm = TRUE), exposure_daily_lag_chronic))
